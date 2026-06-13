@@ -16,9 +16,9 @@ They have been anonymized, refactored, and generalized for public release.
 
 ## Overview
 
-In DR environments without L2 network extension (no stretched VLAN between sites), VMs recovered at the DR site need to be re-IPed to match the DR network plan. This toolkit automates that process for isolated bubble DR exercises.
-
-**The architecture:**
+In DR environments without L2 network extension (no stretched VLAN between sites),
+VMs recovered at the DR site need to be re-IPed to match the DR network plan.
+This toolkit automates that process for isolated bubble DR exercises.
 
 | | Production site | DR site — Isolated bubble |
 |---|---|---|
@@ -34,12 +34,28 @@ In DR environments without L2 network extension (no stretched VLAN between sites
 - No public DNS or firewall changes needed
 - Simple revert — destroy the bubble, SnapMirror resumes
 
-**Why isolated bubble:**
-- Zero risk to production — completely isolated network
-- Real application testing with actual DR data
-- No public DNS or firewall changes needed
-- Simple revert — destroy the bubble, SnapMirror resumes
+---
 
+## Real-world context
+
+This toolkit was used to execute a full DR exercise covering two business-critical
+application stacks — from SnapMirror break to application validation by the app teams.
+
+**What was tested:**
+- Full boot sequence in isolation — DC/DNS first, then SQL, then app servers
+- iSCSI volume mapping for SQL servers (drives mapped directly inside VMs)
+- Automated RE-IP via CSV — network team provided DR IPs, script handled the rest
+- Application teams validated both apps end-to-end via VMware console
+- Zero production impact throughout the exercise
+
+**Lesson learned — iSCSI SQL volumes:**
+During the exercise, SQL server drives mapped via iSCSI were missing at the DR site —
+they had not been included in the initial SnapMirror replication scope.
+An additional SnapMirror sync was required, introducing an unplanned 24-48h delay.
+
+> **Takeaway:** Before any DR exercise, audit ALL volumes required by each VM —
+> including iSCSI LUNs mapped directly inside VMs. These are easy to miss
+> in the replication scope definition.
 ---
 
 ## Workflow
@@ -53,6 +69,8 @@ In DR environments without L2 network extension (no stretched VLAN between sites
 | 5 — Apply | `Invoke-DRReIP.ps1` | Apply DR IPs — runs locally on each VM |
 | 6 — Test | Manual | Validate applications via VMware console |
 | 7 — Revert | Destroy bubble | SnapMirror resync restores prod data + config |
+
+![DR Architecture](docs/images/dr_isolated_bubble.png)
 
 ---
 
